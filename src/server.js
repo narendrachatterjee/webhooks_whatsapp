@@ -7,7 +7,11 @@
 
 import { getNextScreen } from "./data_exchange.js";
 import express from "express";
-import { decryptRequest, encryptResponse, FlowEndpointException } from "./encryption.js";
+import {
+  decryptRequest,
+  encryptResponse,
+  FlowEndpointException,
+} from "./encryption.js";
 import crypto from "crypto";
 import dotenv from "dotenv";
 import axios from "axios";
@@ -22,10 +26,10 @@ app.use(
     verify: (req, res, buf, encoding) => {
       req.rawBody = buf?.toString(encoding || "utf8");
     },
-  }),
+  })
 );
 
-const { APP_SECRET, PASSPHRASE , PORT = "3000" } = process.env;
+const { APP_SECRET, PASSPHRASE, PORT = "3000" } = process.env;
 
 /*
 Example:
@@ -43,7 +47,7 @@ app.post("/", async (req, res) => {
     );
   }
 
-  if(!isRequestSignatureValid(req)) {
+  if (!isRequestSignatureValid(req)) {
     // Return status code 432 if request signature does not match.
     // To learn more about return error codes visit: https://developers.facebook.com/docs/whatsapp/flows/reference/error-codes#endpoint_error_codes
     return res.status(432).send();
@@ -51,7 +55,11 @@ app.post("/", async (req, res) => {
 
   let decryptedRequest = null;
   try {
-    decryptedRequest = decryptRequest(req.body, process.env.PRIVATE_KEY, PASSPHRASE);
+    decryptedRequest = decryptRequest(
+      req.body,
+      process.env.PRIVATE_KEY,
+      PASSPHRASE
+    );
     //console.log(decryptedRequest);
   } catch (err) {
     console.error(err);
@@ -97,19 +105,24 @@ app.listen(PORT, () => {
 });
 
 function isRequestSignatureValid(req) {
-  if(!APP_SECRET) {
-    console.warn("App Secret is not set up. Please Add your app secret in /.env file to check for request validation");
+  if (!APP_SECRET) {
+    console.warn(
+      "App Secret is not set up. Please Add your app secret in /.env file to check for request validation"
+    );
     return true;
   }
-  
+
   const signatureHeader = req.get("x-hub-signature-256");
-  const signatureBuffer = Buffer.from(signatureHeader.replace("sha256=", ""), "utf-8");
+  const signatureBuffer = Buffer.from(
+    signatureHeader.replace("sha256=", ""),
+    "utf-8"
+  );
 
   const hmac = crypto.createHmac("sha256", APP_SECRET);
-  const digestString = hmac.update(req.rawBody).digest('hex');
+  const digestString = hmac.update(req.rawBody).digest("hex");
   const digestBuffer = Buffer.from(digestString, "utf-8");
 
-  if ( !crypto.timingSafeEqual(digestBuffer, signatureBuffer)) {
+  if (!crypto.timingSafeEqual(digestBuffer, signatureBuffer)) {
     console.error("Error: Request Signature did not match");
     return false;
   }
@@ -133,60 +146,63 @@ app.post("/webhook", async (req, res) => {
       req.body.entry?.[0].changes?.[0].value?.metadata?.phone_number_id;
 
     // send a reply message as per the docs here https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages
-    await axios({
-      method: "POST",
-      url: `https://graph.facebook.com/v20.0/${business_phone_number_id}/messages`,
-      headers: {
-        Authorization: `Bearer ${metatoken}`,
-      },
-      data: {
-        messaging_product: "whatsapp",
-        to: message.from,
-        type: "interactive",
-        "interactive":{
-          type: "flow",
-          header: {
-            type: "text",
-            text: "hi"
-          },
-          body: {
-            text: "Flow message body"
-          },
-          footer: {
-            text: "Flow message footer"
-          },
-          action: {
-            name: "flow",
-            parameters: {
-              flow_message_version: "3",
-              flow_token: "random",
-              flow_id: "3754668851414016", // Ensure this flow_id is correct and valid
-              flow_cta: "Book!",
-              flow_action: "data_exchange",
-              mode: "draft"
-            }
-          }
-        }
-      },
-    });
+    if (
+      req.body.entry?.[0].changes?.[0].messages?.text?.body == "Hi"
+    ) {
+      // mark incoming message as read
+      axios({
+        method: "POST",
+        url: `https://graph.facebook.com/v20.0/${business_phone_number_id}/messages`,
+        headers: {
+          Authorization: `Bearer ${metatoken}`,
+        },
+        data: {
+          messaging_product: "whatsapp",
+          status: "read",
+          message_id: message.id,
+        },
+      });
 
-    // mark incoming message as read
-    await axios({
-      method: "POST",
-      url: `https://graph.facebook.com/v20.0/${business_phone_number_id}/messages`,
-      headers: {
-        Authorization: `Bearer ${metatoken}`,
-      },
-      data: {
-        messaging_product: "whatsapp",
-        status: "read",
-        message_id: message.id,
-      },
-    });
+      await axios({
+        method: "POST",
+        url: `https://graph.facebook.com/v20.0/${business_phone_number_id}/messages`,
+        headers: {
+          Authorization: `Bearer ${metatoken}`,
+        },
+        data: {
+          messaging_product: "whatsapp",
+          to: message.from,
+          type: "interactive",
+          interactive: {
+            type: "flow",
+            header: {
+              type: "text",
+              text: "hi",
+            },
+            body: {
+              text: "Flow message body",
+            },
+            footer: {
+              text: "Flow message footer",
+            },
+            action: {
+              name: "flow",
+              parameters: {
+                flow_message_version: "3",
+                flow_token: "random",
+                flow_id: "3754668851414016", // Ensure this flow_id is correct and valid
+                flow_cta: "Book!",
+                flow_action: "data_exchange",
+                mode: "draft",
+              },
+            },
+          },
+        },
+      });
+    }
   } else {
-    console.log()
+    console.log();
   }
-  
 
   res.sendStatus(200);
 });
