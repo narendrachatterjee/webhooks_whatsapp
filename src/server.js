@@ -132,22 +132,20 @@ function isRequestSignatureValid(req) {
 const { WEBHOOK_VERIFY_TOKEN, metatoken } = process.env;
 
 app.post("/webhook", async (req, res) => {
+  if (
+    req.body.entry[0].changes[0].value.messages[0].text.body == "hi"
+  ) {
   userInfo(req);
 
   // check if the webhook request contains a message
   // details on WhatsApp text message payload: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/payload-examples#text-messages
-  const message = req.body.entry?.[0]?.changes[0]?.value?.messages?.[0];
-  // check if the incoming message contains text
-  if (message?.type === "text") {
+
     // extract the business number to send the reply from it
-    const business_phone_number_id =
-    user_phone_number_id;
+    const business_phone_number_id = user_phone_number_id;
 
     // send a reply message as per the docs here https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages
     console.log(req.body.entry[0].changes[0].value.messages[0].text.body);
-    if (
-      (req.body.entry[0].changes[0].value.messages[0].text.body).toLowerCase() == "hi"
-    ) {
+   
       // mark incoming message as read
       axios({
         method: "POST",
@@ -198,9 +196,9 @@ app.post("/webhook", async (req, res) => {
           },
         },
       });
-    }
-  } else {
-    console.log();
+  }
+  else{
+    res.sendStatus(400);
   }
 
   res.sendStatus(200);
