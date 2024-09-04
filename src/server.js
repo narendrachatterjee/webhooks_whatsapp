@@ -15,7 +15,7 @@ import {
 import crypto from "crypto";
 import dotenv from "dotenv";
 import axios from "axios";
-import { userInfo } from "../utils/user_info.js";
+import { user_phone_number_id, userInfo } from "../utils/user_info.js";
 dotenv.config();
 
 const app = express();
@@ -133,8 +133,6 @@ const { WEBHOOK_VERIFY_TOKEN, metatoken } = process.env;
 
 app.post("/webhook", async (req, res) => {
   userInfo(req);
-  // log incoming messages
-  console.log("Incoming webhook message:", JSON.stringify(req.body, null, 2));
 
   // check if the webhook request contains a message
   // details on WhatsApp text message payload: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/payload-examples#text-messages
@@ -142,14 +140,10 @@ app.post("/webhook", async (req, res) => {
   // check if the incoming message contains text
   if (message?.type === "text") {
     // extract the business number to send the reply from it
-    const business_phone_number_id =
-      req.body.entry?.[0].changes?.[0].value?.metadata?.phone_number_id;
+    const business_phone_number_id = user_phone_number_id;
 
     // send a reply message as per the docs here https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages
-    console.log(req.body.entry[0].changes[0].value.messages[0].text.body);
-    if (
-      req.body.entry[0].changes[0].value.messages[0].text.body == "Hi"
-    ) {
+    if (/^hi\s*naptapgo*$/i.test(req.body.entry[0].changes[0].value.messages[0].text.body.trim()))  {
       // mark incoming message as read
       axios({
         method: "POST",
