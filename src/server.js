@@ -140,25 +140,14 @@ app.post("/webhook", async (req, res) => {
   // check if the incoming message contains text
   if (message?.type === "text") {
     // extract the business number to send the reply from it
-    const business_phone_number_id = user_phone_number_id;
+    const business_phone_number_id =
+    user_phone_number_id;
 
     // send a reply message as per the docs here https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages
-    const message = req.body.entry[0].changes[0].value.messages[0].text.body
-      .trim()
-      .toLowerCase();
-
-    const validGreetings = [
-      "hi",
-      "hii",
-      "hiii",
-      "hiiii",
-      "hi naptapgo",
-      "hii naptapgo",
-      "hiii naptapgo",
-      "hiiii naptapgo",
-    ];
-
-    if (validGreetings.includes(message)) {
+    console.log(req.body.entry[0].changes[0].value.messages[0].text.body);
+    if (
+      (req.body.entry[0].changes[0].value.messages[0].text.body).toLowerCase() == "hi"
+    ) {
       // mark incoming message as read
       axios({
         method: "POST",
