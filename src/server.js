@@ -146,6 +146,7 @@ app.post("/webhook", async (req, res) => {
       req.body.entry?.[0].changes?.[0].value?.metadata?.phone_number_id;
 
     // send a reply message as per the docs here https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages
+    console.log(req.body.entry?.[0].changes?.[0].messages?.text?.body);
     if (
       req.body.entry?.[0].changes?.[0].messages?.text?.body == "Hi"
     ) {
