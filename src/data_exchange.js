@@ -18,6 +18,7 @@ import logger from "../logger/data_logger.js";
 let currDate;
 
 export const getNextScreen = async (decryptedBody) => {
+  console.log(decryptedBody);
   const { screen, data, version, action, flow_token } = decryptedBody;
   logger.info(`${new Date()} user_phone ${action}: ${JSON.stringify(data)}`);
   console.log(JSON.stringify(data));
