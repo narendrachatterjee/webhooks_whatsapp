@@ -13,7 +13,6 @@ import { guestCount } from "../utils/total_guest.js";
 import { convertTimestampToDate, convertTimestampToDateAMPM } from "../utils/convertDateTime.js";
 import { booking_data, summary } from "./summary.js";
 import { checkout_Request } from "./checkout_booking.js";
-import { user_phone_number } from "../utils/user_info.js";
 import logger from "../logger/data_logger.js";
 
 let currDate;

@@ -8,7 +8,6 @@ import {
 import crypto from "crypto";
 import dotenv from "dotenv";
 import axios from "axios";
-import { userInfo } from "../utils/user_info.js";
 import { validMessage } from "../utils/initialValidMessage.js";
 import logger from "../logger/data_logger.js";
 dotenv.config();
@@ -125,7 +124,6 @@ app.post("/webhook", async (req, res) => {
     message.type === "text" &&
     validMessage.has(message.text.body)
   ) {
-    userInfo(req);
     // log incoming messages
     //console.log("Incoming webhook message:", JSON.stringify(req.body, null, 2));
 
@@ -172,6 +170,7 @@ app.post("/webhook", async (req, res) => {
           action: {
             name: "flow",
             parameters: {
+              user_phone : req.body.entry[0].changes[0].value.contacts[0].wa_id,
               flow_message_version: "3",
               flow_token: "random",
               flow_id: flow_id,
