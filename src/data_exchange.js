@@ -19,7 +19,7 @@ let currDate;
 
 export const getNextScreen = async (decryptedBody) => {
   const { screen, data, version, action, flow_token } = decryptedBody;
-  logger.info(`${new Date()} ${user_phone_number} ${action}: ${JSON.stringify(data)}`);
+  logger.info(`${new Date()} user_phone ${action}: ${JSON.stringify(data)}`);
   console.log(JSON.stringify(data));
   // handle health check request
   if (action === "ping") {
