@@ -1,6 +1,5 @@
 import { locations } from "../utils/location.js";
 import { staytypes } from "../utils/typeOfStay.js";
-import { user_phone_number } from "../utils/user_info.js";
 
 export const summary = (data) => {
   let hotel = locations.find(location => location.id == data.location).title;

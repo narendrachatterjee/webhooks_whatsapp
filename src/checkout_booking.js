@@ -1,6 +1,5 @@
 import axios from "axios";
 import { checkoutBody } from "../utils/checkout.js";
-import { user_phone_number } from "../utils/user_info.js";
 import logger from "../logger/data_logger.js";
 
 export let checkout_Request = async (data_) => {
@@ -25,7 +24,7 @@ export let checkout_Request = async (data_) => {
       },
       data: checkoutBody(data_),
     });
-    logger.info(`${new Date()} ${user_phone_number} : ${response}`)
+    logger.info(`${new Date()} "user_phone: : ${response}`)
     return response.data.payurl;
   } catch (error) {
     if (error.response && error.response.data) {
