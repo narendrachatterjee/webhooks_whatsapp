@@ -170,7 +170,7 @@ app.post("/webhook", async (req, res) => {
           action: {
             name: "flow",
             parameters: {
-              user_phone : req.body.entry[0].changes[0].value.contacts[0].wa_id,
+             // user_phone : req.body.entry[0].changes[0].value.contacts[0].wa_id,
               flow_message_version: "3",
               flow_token: "random",
               flow_id: flow_id,
