@@ -1,5 +1,7 @@
 import axios from "axios";
 import { checkoutBody } from "../utils/checkout.js";
+import { user_phone_number } from "../utils/user_info.js";
+import logger from "../logger/data_logger.js";
 
 export let checkout_Request = async (data_) => {
   try {
@@ -7,10 +9,10 @@ export let checkout_Request = async (data_) => {
       method: "POST",
       url: `https://naptapgo-api.azurewebsites.net/v1/users/generateToken`,
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/json",   
       },
       data: {
-        userId: "9xcb8b91e2d383f2e0b3afb",
+        userId: process.env.userId,
       },
     });
 
@@ -23,12 +25,13 @@ export let checkout_Request = async (data_) => {
       },
       data: checkoutBody(data_),
     });
+    logger.info(`${new Date()} ${user_phone_number} : ${response}`)
     return response.data.payurl;
   } catch (error) {
     if (error.response && error.response.data) {
-      console.error("Error checkout:", error.response.data);
+      logger.error(`Error checkout: ${error.response.data}`);
     } else {
-      console.error("Error checkout:", error.message);
+      logger.error(`Error checkout: ${error.message}`);
     }
   }
 };

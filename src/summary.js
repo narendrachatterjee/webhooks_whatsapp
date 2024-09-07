@@ -44,7 +44,7 @@ export const booking_data = (data, url) => {
     tax,
     total,
   } = summary(data);
-  let phone_number = (data.phone_main).toString();
+  let phone_number = "91"+(data.phone_main).toString();
 
   return {
     messaging_product: "whatsapp",

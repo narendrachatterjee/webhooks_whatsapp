@@ -6,6 +6,7 @@
  */
 
 import crypto from "crypto";
+import logger from "../logger/data_logger.js";
 
 export const decryptRequest = (body, privatePem, passphrase) => {
   const { encrypted_aes_key, encrypted_flow_data, initial_vector } = body;
@@ -25,7 +26,7 @@ export const decryptRequest = (body, privatePem, passphrase) => {
       Buffer.from(encrypted_aes_key, "base64")
     );
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     /*
     Failed to decrypt. Please verify your private key.
     If you change your public key. You need to return HTTP status code 421 to refresh the public key on the client

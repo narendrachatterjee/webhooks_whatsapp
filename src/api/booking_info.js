@@ -1,4 +1,5 @@
 import axios from "axios";
+import logger from "../../logger/data_logger.js";
 
 export const sendWhatsAppMessage = async (data) => {
     try {
@@ -8,18 +9,16 @@ export const sendWhatsAppMessage = async (data) => {
             'Content-Type': 'application/json'
         };
 
-        console.log(url, data, headers);
-
         const response = await axios.post(url, data, { headers });
-        console.log('Message sent:', response.data);
+        logger.info(`Message sent: ${JSON.stringify(response.data)}`);
     } catch (error) {
-        console.error('Error sending message:', error.message);
+        logger.error(`Error sending message: ${error.message}`);
         if (error.response) {
-            console.error('Response error:', error.response.data);
+            logger.error(`Response error: ${error.response.data}`);
         } else if (error.request) {
-            console.error('No response received:', error.request);
+            logger.error(`No response received: ${error.request}`);
         } else {
-            console.error('Request error:', error.message);
+            logger.error(`Request error: ${error.message}`);
         }
     }
 };

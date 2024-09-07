@@ -1,10 +1,3 @@
-/**
- * Copyright (c) Meta Platforms, Inc. and affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-
 import { getNextScreen } from "./data_exchange.js";
 import express from "express";
 import {
@@ -15,7 +8,9 @@ import {
 import crypto from "crypto";
 import dotenv from "dotenv";
 import axios from "axios";
-import { user_phone_number_id, userInfo } from "../utils/user_info.js";
+import { userInfo } from "../utils/user_info.js";
+import { validMessage } from "../utils/initialValidMessage.js";
+import logger from "../logger/data_logger.js";
 dotenv.config();
 
 const app = express();
@@ -60,9 +55,8 @@ app.post("/", async (req, res) => {
       process.env.PRIVATE_KEY,
       PASSPHRASE
     );
-    //console.log(decryptedRequest);
   } catch (err) {
-    console.error(err);
+    logger.error("Error in decrypting request : ", err);
     if (err instanceof FlowEndpointException) {
       return res.status(err.statusCode).send();
     }
@@ -70,27 +64,8 @@ app.post("/", async (req, res) => {
   }
 
   const { aesKeyBuffer, initialVectorBuffer, decryptedBody } = decryptedRequest;
-  //console.log("💬 Decrypted Request:", decryptedBody);
-
-  // TODO: Uncomment this block and add your flow token validation logic.
-  // If the flow token becomes invalid, return HTTP code 427 to disable the flow and show the message in `error_msg` to the user
-  // Refer to the docs for details https://developers.facebook.com/docs/whatsapp/flows/reference/error-codes#endpoint_error_codes
-
-  /*
-  if (!isValidFlowToken(decryptedBody.flow_token)) {
-    const error_response = {
-      error_msg: `The message is no longer available`,
-    };
-    return res
-      .status(427)
-      .send(
-        encryptResponse(error_response, aesKeyBuffer, initialVectorBuffer)
-      );
-  }
-  */
 
   const screenResponse = await getNextScreen(decryptedBody);
-  //console.log("👉 Response to Encrypt:", screenResponse);
 
   res.send(encryptResponse(screenResponse, aesKeyBuffer, initialVectorBuffer));
 });
@@ -123,87 +98,92 @@ function isRequestSignatureValid(req) {
   const digestBuffer = Buffer.from(digestString, "utf-8");
 
   if (!crypto.timingSafeEqual(digestBuffer, signatureBuffer)) {
-    console.error("Error: Request Signature did not match");
+    logger.error("Error: Request Signature did not match");
     return false;
   }
   return true;
 }
 
-const { WEBHOOK_VERIFY_TOKEN, metatoken } = process.env;
+const { WEBHOOK_VERIFY_TOKEN, metatoken, flow_id } = process.env;
 
 app.post("/webhook", async (req, res) => {
-  const message = req.body.entry?.[0]?.changes[0]?.value?.messages?.[0].text.body;
-  console.log(message);
+  const message = req.body.entry?.[0]?.changes[0]?.value?.messages?.[0];
+  const messageBody = message?.text?.body;
+
+  const messageType = message?.type;
+  if (message != undefined) {
+    logger.info(
+      `${new Date()} phone_number: ${
+        req.body.entry[0].changes[0].value.contacts[0].wa_id
+      } name: ${
+        req.body.entry[0].changes[0].value.contacts[0].profile.name
+      } message type: ${messageType} message: ${messageBody}`
+    );
+  }
   if (
-    message == "hi"
+    message != undefined &&
+    message.type === "text" &&
+    validMessage.has(message.text.body)
   ) {
-  userInfo(req);
+    userInfo(req);
+    // log incoming messages
+    //console.log("Incoming webhook message:", JSON.stringify(req.body, null, 2));
 
-  // check if the webhook request contains a message
-  // details on WhatsApp text message payload: https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/payload-examples#text-messages
-
-  
     // extract the business number to send the reply from it
-    const business_phone_number_id = user_phone_number_id;
+    const business_phone_number_id =
+      req.body.entry?.[0].changes?.[0].value?.metadata?.phone_number_id;
 
+    // mark incoming message as read
+    await axios({
+      method: "POST",
+      url: `https://graph.facebook.com/v20.0/${business_phone_number_id}/messages`,
+      headers: {
+        Authorization: `Bearer ${metatoken}`,
+      },
+      data: {
+        messaging_product: "whatsapp",
+        status: "read",
+        message_id: message.id,
+      },
+    });
     // send a reply message as per the docs here https://developers.facebook.com/docs/whatsapp/cloud-api/reference/messages
-    console.log(req.body.entry[0].changes[0].value.messages[0].text.body);
-   
-      // mark incoming message as read
-      axios({
-        method: "POST",
-        url: `https://graph.facebook.com/v20.0/${business_phone_number_id}/messages`,
-        headers: {
-          Authorization: `Bearer ${metatoken}`,
-        },
-        data: {
-          messaging_product: "whatsapp",
-          status: "read",
-          message_id: message.id,
-        },
-      });
-
-      await axios({
-        method: "POST",
-        url: `https://graph.facebook.com/v20.0/${business_phone_number_id}/messages`,
-        headers: {
-          Authorization: `Bearer ${metatoken}`,
-        },
-        data: {
-          messaging_product: "whatsapp",
-          to: message.from,
-          type: "interactive",
-          interactive: {
-            type: "flow",
-            header: {
-              type: "text",
-              text: "hi",
-            },
-            body: {
-              text: "Flow message body",
-            },
-            footer: {
-              text: "Flow message footer",
-            },
-            action: {
-              name: "flow",
-              parameters: {
-                flow_message_version: "3",
-                flow_token: "random",
-                flow_id: "3754668851414016", // Ensure this flow_id is correct and valid
-                flow_cta: "Book!",
-                flow_action: "data_exchange",
-                mode: "draft",
-              },
+    await axios({
+      method: "POST",
+      url: `https://graph.facebook.com/v20.0/${business_phone_number_id}/messages`,
+      headers: {
+        Authorization: `Bearer ${metatoken}`,
+      },
+      data: {
+        messaging_product: "whatsapp",
+        to: message.from,
+        type: "interactive",
+        interactive: {
+          type: "flow",
+          header: {
+            type: "text",
+            text: `${message.text.body}`,
+          },
+          body: {
+            text: "Flow message body",
+          },
+          footer: {
+            text: "Flow message footer",
+          },
+          action: {
+            name: "flow",
+            parameters: {
+              flow_message_version: "3",
+              flow_token: "random",
+              flow_id: flow_id,
+              flow_cta: "Book!",
+              flow_action: "data_exchange",
+              mode: "draft",
             },
           },
         },
-      });
+      },
+    });
   }
-  else{
-    res.sendStatus(400);
-  }
-
   res.sendStatus(200);
 });
 
@@ -218,6 +198,7 @@ app.get("/webhook", (req, res) => {
   if (mode === "subscribe" && token === WEBHOOK_VERIFY_TOKEN) {
     // respond with 200 OK and challenge token from the request
     res.status(200).send(challenge);
+    logger.info("Webhook verified successfully!");
     console.log("Webhook verified successfully!");
   } else {
     // respond with '403 Forbidden' if verify tokens do not match

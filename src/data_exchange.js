@@ -10,15 +10,18 @@ import {
   validGuestToRoomCount,
 } from "../utils/validation.js";
 import { guestCount } from "../utils/total_guest.js";
-import { convertTimestampToDate } from "../utils/convertDateTime.js";
+import { convertTimestampToDate, convertTimestampToDateAMPM } from "../utils/convertDateTime.js";
 import { booking_data, summary } from "./summary.js";
 import { checkout_Request } from "./checkout_booking.js";
 import { user_phone_number } from "../utils/user_info.js";
+import logger from "../logger/data_logger.js";
 
 let currDate;
 
 export const getNextScreen = async (decryptedBody) => {
   const { screen, data, version, action, flow_token } = decryptedBody;
+  logger.info(`${new Date()} ${user_phone_number} ${action}: ${JSON.stringify(data)}`);
+  console.log(JSON.stringify(data));
   // handle health check request
   if (action === "ping") {
     return {
@@ -31,7 +34,7 @@ export const getNextScreen = async (decryptedBody) => {
 
   // handle error notification
   if (data?.error) {
-    console.warn("Received client error:", data);
+    logger.error(`Received client error: ${data}`);
     return {
       version,
       data: {
@@ -42,7 +45,7 @@ export const getNextScreen = async (decryptedBody) => {
 
   // handle initial request when opening the flow and display APPOINTMENT screen
   if (action === "INIT") {
-    currDate = new Date();
+    currDate = new Date();    
     return {
       ...SCREEN_RESPONSES.DETAILS,
     };
@@ -52,9 +55,10 @@ export const getNextScreen = async (decryptedBody) => {
     switch (screen) {
       case "DETAILS":
         let dataForward = { ...data };
+        
+        const phone = user_phone_number
         const nightstay_visible_status = data.staytype === "nightstay";
         const hourlystay_visible_status = data.staytype === "hourlystay";
-
         return {
           data: {
             nightstay_visible: nightstay_visible_status,
@@ -62,6 +66,8 @@ export const getNextScreen = async (decryptedBody) => {
             arrivalTime: arrival_time_,
             stayDuration: stay_duration,
             totalGuest: guestCount,
+            phone_number : phone, 
+            ...data,
             ...dataForward,
           },
           ...SCREEN_RESPONSES.Stay,
@@ -69,7 +75,7 @@ export const getNextScreen = async (decryptedBody) => {
 
       case "Stay":
         let dataForward1 = { ...data };
-        let check_in, check_out;
+        let check_in, check_out, check_in_text, check_out_text;
         const error = validateStay(data);
         if (error) {
           return {
@@ -87,7 +93,16 @@ export const getNextScreen = async (decryptedBody) => {
             Number(data.check_in_date),
             data.arrival_time
           );
+          check_in_text = convertTimestampToDateAMPM(
+            Number(data.check_in_date),
+            data.arrival_time
+          );
           check_out = convertTimestampToDate(
+            Number(data.check_in_date),
+            data.arrival_time,
+            data.stay_duration
+          );
+          check_out_text = convertTimestampToDateAMPM(
             Number(data.check_in_date),
             data.arrival_time,
             data.stay_duration
@@ -97,7 +112,15 @@ export const getNextScreen = async (decryptedBody) => {
             Number(data.check_in_date),
             data.arrival_time
           );
+          check_in_text = convertTimestampToDateAMPM(
+            Number(data.check_in_date),
+            data.arrival_time
+          );
           check_out = convertTimestampToDate(
+            Number(data.check_out_date),
+            data.arrival_time
+          );
+          check_out_text = convertTimestampToDateAMPM(
             Number(data.check_out_date),
             data.arrival_time
           );
@@ -207,10 +230,11 @@ export const getNextScreen = async (decryptedBody) => {
               setvisible_Thirdroom: true,
             }
           : { setvisible_Thirdroom: false };
+          
         return {
           data: {
-            check_in_dateTime: check_in,
-            check_out_dateTime: check_out,
+            check_in_dateTime: check_in_text,
+            check_out_dateTime: check_out_text,
             total_guest,            
             ...FirstRoomDetails,
             ...SecondRoomDetails,
@@ -302,8 +326,8 @@ export const getNextScreen = async (decryptedBody) => {
               number_of_guests: data.number_of_guests,
               check_in_dateTime: data.check_in_dateTime,
               check_out_dateTime: data.check_out_dateTime,
-              phone_number : user_phone_number,
-              phone_number_text : `Contact : ${user_phone_number}`,
+              phone_number : data.phone_number,
+              phone_number_text : Number(data.phone_number.substring(2)),
               ...firstroomdata,
               ...secondroomdata,
               ...thirdroomdata,

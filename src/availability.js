@@ -1,4 +1,5 @@
 import axios from "axios";
+import logger from "../logger/data_logger.js";
 export const RoomAvailability = async (hotel, checkInDateTime, checkOutDateTime) => {
     try {
       const token = await axios({
@@ -29,9 +30,9 @@ export const RoomAvailability = async (hotel, checkInDateTime, checkOutDateTime)
     } 
     catch (error) {
       if (error.response && error.response.data) {
-        console.error('Error sending message:', error.response.data);
+        logger.error(`Error sending message: ${error.response.data}`);
       } else {
-        console.error('Error sending message:', error.message);
+        logger.error(`Error sending message: ${error.message}`);
       }
     }
   };
